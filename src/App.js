@@ -1,4 +1,11 @@
-import {useState} from "react";
+import React, {useState} from "react";
+import Header from "./components/Header/Header";
+import InputWrapper from "./components/InputWrapper/InputWrapper";
+import Tasks from "./components/Tasks/Tasks";
+import * as PropTypes from "prop-types";
+import {TaskCounter} from "./components/TaskCounter/TaskCounter";
+import {Filters} from "./components/Filters/Filters";
+import {ClearCompleted} from "./components/ClearCompleted/ClearCompleted";
 
 
 function* genId() {
@@ -12,15 +19,41 @@ function* genId() {
 const nextId = genId();
 
 
+TaskCounter.propTypes = {
+    tasks: PropTypes.arrayOf(PropTypes.any),
+    predicate: PropTypes.func
+};
+
+Filters.propTypes = {
+    onClick: PropTypes.func,
+    onClick1: PropTypes.func,
+    onClick2: PropTypes.func
+};
+
+ClearCompleted.propTypes = {
+    tasks: PropTypes.arrayOf(PropTypes.any),
+    predicate: PropTypes.func,
+    onClick: PropTypes.func
+};
+
 function App() {
     const [value, setValue] = useState('');
     const [tasks, setTasks] = useState([]);
     const [filter, setFilter] = useState('all');
+    const [done, setDoneAll] = useState(false);
 
     function handleInput(event) {
         setValue(event.target.value)
     }
 
+    function handleContentEditable(event, taskToChange){
+        setTasks(tasks.map((task) => {
+            if (task === taskToChange) {
+                task.name = event.target.innerText;
+            }
+            return task
+        }))
+    }
 
     function handleAddTask(event) {
         if (event.key === 'Enter') {
@@ -39,7 +72,7 @@ function App() {
     }
 
     function handleDeleteTask(taskToRemove) {
-        setTasks(tasks.filter((task) => task != taskToRemove));
+        setTasks(tasks.filter((task) => task !== taskToRemove));
     }
 
     function handleDeleteAllTask() {
@@ -49,34 +82,34 @@ function App() {
     function handleDoneAllTasks() {
         let done = tasks.every((task) => task.status === true);
         setTasks(tasks.map((task) => ({...task, status: !done})));
+        setDoneAll(!done);
     }
 
     return (
         <div>
-            <h1>todos</h1>
-            <div>
-                <button onClick={handleDoneAllTasks}>All done!</button>
-                <input type="text" onKeyUp={handleAddTask} onChange={handleInput} value={value}
-                       placeholder={'What needs to be done?'}/>
-                <ul>
-                    {tasks
-                        .filter((task) => filter === 'all' ? true : task.status === filter)
-                        .map((task) => <li key={task.id}>
-                        <button onClick={() => {handleChangeStatus(task)}}>{`${task.status}`}</button>
-                        <span>{task.name}</span>
-                        <button onClick={() => handleDeleteTask(task)}>x</button>
-                    </li>)}
-                </ul>
-                <span>{tasks.filter((task) => !task.status).length} items left</span>
+            <Header/>
+            <InputWrapper tasks={tasks} doneAll={done} handleDoneAllTasks={handleDoneAllTasks} value={value} handleAddTask={handleAddTask} handleInput={handleInput} />
+
+            {!!tasks.length && (
                 <div>
-                    <button onClick={() => setFilter('all')}>All</button>
-                    <button onClick={() => setFilter(false)}>Active</button>
-                    <button onClick={() => setFilter(true)}>Completed</button>
+                    <Tasks handleContentEditable={handleContentEditable} tasks={tasks} filter={filter}
+                           handleChangeStatus={handleChangeStatus} handleDeleteTask={handleDeleteTask}/>
+
+                    <div>
+
+
+                        <TaskCounter tasks={tasks} predicate={(task) => !task.status}/>
+                        <Filters setFilter={{setFilter}}/>
+
+                        <ClearCompleted tasks={tasks} predicate={(task) => task.status} onClick={handleDeleteAllTask}/>
+
+                    </div>
                 </div>
+            )}
 
-                {!!tasks.filter((task) => !task.status) && (<button onClick={handleDeleteAllTask}>Clear completed</button>)}
 
-            </div>
+
+
         </div>
     );
 }
