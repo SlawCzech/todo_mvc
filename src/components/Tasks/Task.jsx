@@ -1,4 +1,5 @@
 import './Task.scss'
+import {Link} from "react-router-dom";
 
 function Task({handleContentEditable, task, handleDeleteTask, handleChangeStatus}) {
     const {id, status, name} = task;
@@ -12,7 +13,10 @@ function Task({handleContentEditable, task, handleDeleteTask, handleChangeStatus
             }}
             >
             </i>
-            <span className='taskName' onBlur={(event) => handleContentEditable(event, task)}>{name}</span>
+            <span className='taskName' onBlur={(event) => handleContentEditable(event, task)}
+            >
+                <Link to={`/details/${id}`}>{name}</Link>
+            </span>
             <button className='taskDeleteBtn' onClick={() => handleDeleteTask(task)}>x</button>
         </li>
     );
