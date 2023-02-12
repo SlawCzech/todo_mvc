@@ -1,11 +1,22 @@
-import React from "react";
+import React, {useState} from "react";
 import './InputWrapper.scss'
 
-function InputTask({value, handleInput, handleAddTask}) {
+function InputTask({handleAddTask}) {
+    const [value, setValue] = useState('');
+    function handleInput(event) {
+        setValue(event.target.value)
+    }
+
+    function addTask(event){
+        if (event.key === 'Enter' && value.trim() !== ''){
+        handleAddTask(value);
+        setValue('');}
+    }
+
     return (
         <input type="text"
                className='inputTask'
-               onKeyUp={handleAddTask}
+               onKeyUp={addTask}
                onChange={handleInput}
                value={value}
                placeholder={'What needs to be done?'}/>

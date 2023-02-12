@@ -1,4 +1,4 @@
-import React, {useState} from "react";
+import React, {useEffect, useState} from "react";
 import Header from "./components/Header/Header";
 import InputWrapper from "./components/InputWrapper/InputWrapper";
 import Tasks from "./components/Tasks/Tasks";
@@ -6,47 +6,53 @@ import * as PropTypes from "prop-types";
 import {TaskCounter} from "./components/TaskCounter/TaskCounter";
 import {Filters} from "./components/Filters/Filters";
 import {ClearCompleted} from "./components/ClearCompleted/ClearCompleted";
-
-
-function* genId() {
-    let id = 0;
-    while (true) {
-        yield id;
-        id++;
-    }
-}
-
-const nextId = genId();
-
-
-TaskCounter.propTypes = {
-    tasks: PropTypes.arrayOf(PropTypes.any),
-    predicate: PropTypes.func
-};
-
-Filters.propTypes = {
-    onClick: PropTypes.func,
-    onClick1: PropTypes.func,
-    onClick2: PropTypes.func
-};
-
-ClearCompleted.propTypes = {
-    tasks: PropTypes.arrayOf(PropTypes.any),
-    predicate: PropTypes.func,
-    onClick: PropTypes.func
-};
+import {addTaskApi, getAllTasksApi} from "./helpers/api";
+//
+//
+// function* genId() {
+//     let id = 0;
+//     while (true) {
+//         yield id;
+//         id++;
+//     }
+// }
+//
+// const nextId = genId();
+//
+//
+// TaskCounter.propTypes = {
+//     tasks: PropTypes.arrayOf(PropTypes.any),
+//     predicate: PropTypes.func
+// };
+//
+// Filters.propTypes = {
+//     onClick: PropTypes.func,
+//     onClick1: PropTypes.func,
+//     onClick2: PropTypes.func
+// };
+//
+// ClearCompleted.propTypes = {
+//     tasks: PropTypes.arrayOf(PropTypes.any),
+//     predicate: PropTypes.func,
+//     onClick: PropTypes.func
+// };
 
 function App() {
-    const [value, setValue] = useState('');
     const [tasks, setTasks] = useState([]);
     const [filter, setFilter] = useState('all');
     const [done, setDoneAll] = useState(false);
 
-    function handleInput(event) {
-        setValue(event.target.value)
-    }
+    useEffect(() => {
+        const controller = new AbortController();
+        getAllTasksApi(controller.signal).then(setTasks);
 
-    function handleContentEditable(event, taskToChange){
+        return () => {
+            controller.abort();
+        }
+    }, [])
+
+
+    function handleContentEditable(event, taskToChange) {
         setTasks(tasks.map((task) => {
             if (task === taskToChange) {
                 task.name = event.target.innerText;
@@ -55,15 +61,15 @@ function App() {
         }))
     }
 
-    function handleAddTask(event) {
-        if (event.key === 'Enter') {
-            setTasks([...tasks, {
-                id: nextId.next().value,
-                name: value,
-                status: false
-            }]);
-            setValue('');
-        }
+    async function handleAddTask(value) {
+        const task = await addTaskApi({name: value, status: false})
+        setTasks([...tasks, task]);
+
+    }
+
+    async function deleteTaskApi(taskId) {
+        const response = await fetch(`http://localhost:3001/tasks/${taskId}`, {method: 'DELETE'});
+        return await response.json();
     }
 
     function handleChangeStatus(task) {
@@ -71,12 +77,21 @@ function App() {
         setTasks([...tasks]);
     }
 
-    function handleDeleteTask(taskToRemove) {
+    async function handleDeleteTask(taskToRemove) {
+        await deleteTaskApi(taskToRemove.id);
         setTasks(tasks.filter((task) => task !== taskToRemove));
     }
 
-    function handleDeleteAllTask() {
-        setTasks(tasks.filter((task) => !task.status));
+    async function handleDeleteAllTask() {
+        const filteredTasks = [];
+        for (const task of tasks) {
+            if (task.status) {
+                await deleteTaskApi(task.id)
+            } else {
+                filteredTasks.push(task)
+            }
+        }
+        setTasks(filteredTasks);
     }
 
     function handleDoneAllTasks() {
@@ -88,7 +103,8 @@ function App() {
     return (
         <div>
             <Header/>
-            <InputWrapper tasks={tasks} doneAll={done} handleDoneAllTasks={handleDoneAllTasks} value={value} handleAddTask={handleAddTask} handleInput={handleInput} />
+            <InputWrapper tasks={tasks} doneAll={done} handleDoneAllTasks={handleDoneAllTasks}
+                          handleAddTask={handleAddTask}/>
 
             {!!tasks.length && (
                 <div>
@@ -106,8 +122,6 @@ function App() {
                     </div>
                 </div>
             )}
-
-
 
 
         </div>
